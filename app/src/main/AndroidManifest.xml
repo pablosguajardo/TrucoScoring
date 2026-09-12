@@ -15,10 +15,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TrucoScoring">
 
-        <!-- AdMob App ID (TEST - reemplazar con el real antes de publicar) -->
+        <!-- AdMob App ID REAL -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-2172238810849340~2387831433" />
+        <!-- AdMob App ID TEST (descommentar para pruebas):
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
+        -->
 
         <activity
             android:name=".MainActivity"
