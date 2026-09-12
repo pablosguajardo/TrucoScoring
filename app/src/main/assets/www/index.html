@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anotador de Truco PRO</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #1a1b26;
+            --card-dark: #24283b;
+            --text-main: #c0caf5;
+            --accent-blue: #7aa2f7;
+            --accent-purple: #bb9af7;
+            --accent-green: #9ece6a;
+            --accent-red: #f7768e;
+            --accent-orange: #e0af68;
+            --match-head-malas: #e06c75;
+            --match-head-buenas: #2ac3de;
+            --match-stick: #e0af68;
+            --match-burnt: #414868;
+        }
+
+        html {
+            height: 100%;
+            background-color: var(--bg-dark);
+        }
+        
+        body {
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-main);
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
+            overflow: hidden; /* Previene el scroll del body */
+            touch-action: manipulation;
+        }
+
+        .screen {
+            height: calc(var(--vh, 1vh) * 100);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .screen.hidden {
+            display: none;
+        }
+
+        .card-bg {
+            background-color: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem;
+            border-radius: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+            transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer;
+        }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        .btn-primary { background-image: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); color: white; }
+        .btn-secondary { background-image: linear-gradient(to right, #8e44ad 0%, #c0392b 100%); color: white; }
+        .btn-action { background-color: var(--accent-purple); color: var(--bg-dark); }
+        .btn-win { background-color: var(--accent-green); color: var(--bg-dark); }
+        .btn-danger { background-color: var(--accent-red); color: white; }
+        .btn-add-point { background-color: var(--accent-blue); color: var(--bg-dark); font-size: 1.25rem; font-weight: 700; }
+        .btn-flor { background-image: linear-gradient(to right, #f83600 0%, #f9d423 100%); color: white; }
+
+        /* Fósforos Realistas (Tamaño Ajustado) */
+        .fosforo-group { position: relative; width: 30px; height: 30px; }
+        .fosforo { position: absolute; background-color: var(--match-stick); border-radius: 2px; transition: background-color 0.5s ease; }
+        .fosforo::before { content: ''; position: absolute; width: 8px; height: 8px; border-radius: 50%; left: -2.5px; top: -2.5px; transition: background-color 0.5s ease; }
+        .fosforo.malas::before { background-color: var(--match-head-malas); }
+        .fosforo.buenas::before { background-color: var(--match-head-buenas); }
+        .fosforo.quemado { background-color: var(--match-burnt); }
+        .fosforo.quemado::before { background-color: #3b4261; }
+
+        /* Animación de fuego corregida para móviles */
+        #fire-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .particle {
+            position: absolute;
+            bottom: -50px;
+            border-radius: 50%;
+            opacity: 0;
+            animation: rise 2s ease-out forwards;
+            background: radial-gradient(circle, rgba(255,220,0,0.8) 0%, rgba(255,140,0,0.6) 40%, rgba(255,69,0,0.2) 80%, transparent 100%);
+            filter: blur(2px);
+        }
+        
+        @keyframes rise {
+            0% { transform: translateY(0) scale(1); opacity: 0.9; }
+            100% { transform: translateY(-100vh) scale(0); opacity: 0; }
+        }
+        
+        /* Contenedor de Banner Pica-Pica con espacio reservado */
+        #pica-pica-container {
+            height: 44px; 
+            flex-shrink: 0;
+            margin: 0 0.5rem 0.5rem 0.5rem;
+            position: relative;
+        }
+        #pica-pica-banner {
+            position: absolute;
+            width: 100%;
+            background-image: linear-gradient(to right, var(--accent-red), var(--accent-orange));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-align: center;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+        }
+        #pica-pica-banner.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Estilos para el nombre del equipo con más espacio y ajuste de línea */
+        .team-name-container {
+            min-height: 72px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            cursor: pointer;
+        }
+        .team-name {
+            font-size: 1.125rem; /* 18px */
+            line-height: 1.3;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        /* Espacio para Fósforos optimizado */
+        .fosforo-container {
+            min-height: 0; 
+        }
+
+        /* Estilos para Inputs y Selects (permitir selección) */
+        .input-field { 
+            width: 100%; padding: 0.5rem; border-radius: 0.5rem; 
+            background-color: #16161e; 
+            border: 1px solid #414868; 
+            color: var(--text-main); 
+            transition: all 0.2s ease; 
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        .input-field:focus { outline: none; border-color: var(--accent-purple); box-shadow: 0 0 0 2px rgba(187, 154, 247, 0.5); }
+        .input-field option { background-color: #16161e; color: var(--text-main); }
+        .input-field option:disabled { color: #555; }
+
+        /* Toggle Button Fix */
+        .toggle-label { transition: background-color 0.2s ease-in-out; }
+        .toggle-checkbox { transition: transform 0.2s ease-in-out; }
+        .toggle-checkbox:checked { transform: translateX(1rem); }
+        .toggle-checkbox:checked + .toggle-label { background-color: var(--accent-green); }
+    </style>
+</head>
+<body>
+    <div id="fire-overlay"></div>
+
+    <!-- PANTALLA DE CONFIGURACIÓN -->
+    <div id="screen-setup" class="screen p-4 items-center justify-center">
+        <div class="w-full max-w-md card-bg p-6 rounded-2xl shadow-2xl flex flex-col">
+            <h1 class="text-3xl sm:text-4xl font-black text-center mb-6 text-white">Anotador <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Truco</span></h1>
+            <div class="space-y-4">
+                <div>
+                    <label for="game-mode" class="block mb-1 text-md font-semibold text-gray-300">Modo de Juego</label>
+                    <select id="game-mode" class="input-field">
+                        <option value="quick">Partida Rápida</option>
+                        <option value="tournament">Torneo de Parejas</option>
+                    </select>
+                </div>
+                <div id="tournament-setup" class="hidden space-y-3 pt-3 border-t-2 border-purple-800">
+                     <h2 class="text-xl font-bold text-center text-white">Configurar Torneo</h2>
+                    <div class="flex space-x-2">
+                        <div class="w-1/2"><label for="player-count" class="block mb-1 text-sm">Jugadores</label><input type="number" id="player-count" value="6" min="2" max="24" class="input-field"></div>
+                        <div class="w-1/2"><label for="players-per-team" class="block mb-1 text-sm">Por Equipo</label><select id="players-per-team" class="input-field"><option value="2">2</option><option value="3" selected>3</option></select></div>
+                    </div>
+                    <div id="player-names-container" class="space-y-1 max-h-[25vh] overflow-y-auto p-1"></div>
+                    <p id="tournament-error" class="text-red-400 text-center hidden text-sm">Nombres duplicados o vacíos.</p>
+                </div>
+                <div class="space-y-2 pt-3 border-t-2 border-purple-800">
+                    <div class="flex items-center justify-between p-2 bg-gray-900 bg-opacity-50 rounded-lg"><label for="flor-toggle" class="font-semibold text-sm">Jugar con Flor</label><div class="relative inline-block w-10 align-middle"><input type="checkbox" id="flor-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><label for="flor-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label></div></div>
+                    <div id="pica-pica-option-container" class="flex items-center justify-between p-2 bg-gray-900 bg-opacity-50 rounded-lg transition-opacity duration-300"><label for="pica-pica-toggle" class="font-semibold text-sm">Activar Pica-Pica</label><div class="relative inline-block w-10 align-middle"><input type="checkbox" id="pica-pica-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" checked/><label for="pica-pica-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label></div></div>
+                </div>
+                <div class="space-y-2 pt-4 mt-auto">
+                    <button id="start-btn" class="btn btn-primary w-full text-md">Empezar Partida</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE JUEGO -->
+    <div id="screen-game" class="screen hidden p-2">
+        <header class="grid grid-cols-3 items-center mb-2 px-2 flex-shrink-0">
+            <div class="flex justify-start">
+                 <button id="back-to-menu-btn" class="btn btn-danger !p-2 text-sm">Volver</button>
+            </div>
+            <div id="game-history-btn-container" class="flex justify-center"></div>
+            <div class="flex justify-end">
+                <button id="sound-toggle-btn" class="btn bg-gray-700 !p-2"></button>
+            </div>
+        </header>
+        <div id="pica-pica-container">
+            <div id="pica-pica-banner">PICA-PICA</div>
+        </div>
+        <main id="game-container" class="flex-grow grid grid-cols-2 gap-2 overflow-hidden"></main>
+    </div>
+
+    <!-- PANTALLA DE TORNEO -->
+    <div id="screen-tournament" class="screen hidden p-4">
+        <div class="w-full max-w-4xl mx-auto card-bg p-4 rounded-2xl shadow-2xl flex flex-col h-full">
+            <h1 class="text-3xl font-bold text-center mb-4 text-white flex-shrink-0">Torneo</h1>
+            <div id="rounds-container" class="space-y-3 overflow-y-auto flex-grow p-1"></div>
+            <div class="flex flex-wrap gap-2 justify-center mt-4 border-t-2 border-purple-800 pt-4 flex-shrink-0">
+                <button id="add-round-btn" class="btn btn-win !py-2 text-sm">+ Ronda</button>
+                <button id="add-team-btn" class="btn btn-action !py-2 text-sm">+ Pareja</button>
+                <button id="tournament-history-btn" class="btn btn-secondary !py-2 text-sm">Historial</button>
+                <button id="back-to-setup-btn" class="btn btn-danger !py-2 text-sm">Menú Principal</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODALES -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="card-bg p-6 rounded-2xl shadow-xl w-full max-w-lg relative">
+            <button id="modal-close-btn" class="absolute top-3 right-3 text-2xl font-bold text-gray-400 hover:text-white transition">&times;</button>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-white text-center"></h2>
+            <div id="modal-body" class="text-base text-gray-300 max-h-[60vh] overflow-y-auto"></div>
+            <div id="modal-footer" class="mt-4 flex flex-wrap justify-center gap-2"></div>
+        </div>
+    </div>
+    
+    <div id="clp-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+        <div class="text-5xl md:text-7xl font-black text-white text-center" style="text-shadow: 0 0 25px var(--accent-orange), 0 0 40px var(--accent-red);">
+            ¡Muy bien!
+        </div>
+    </div>
+
+    <script type="module">
+        // ===================================================================
+        // ESTADO GLOBAL Y CONFIGURACIÓN
+        // ===================================================================
+        let state = {};
+        let sounds = {};
+        let soundEnabled = true;
+        let pointUpdateQueue = [];
+        let isProcessingQueue = false;
+        
+        const DOM = Object.fromEntries(
+            Array.from(document.querySelectorAll('[id]')).map(el => [el.id.replace(/-./g, m => m[1].toUpperCase()), el])
+        );
+        DOM.body = document.body;
+
+        const ICONS = {
+            soundOn: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`,
+            soundOff: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 5V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`
+        };
+
+        // ===================================================================
+        // LÓGICA DE SONIDO
+        // ===================================================================
+        function setupSounds() {
+            const softEnvelope = { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 };
+            sounds.point = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: softEnvelope, volume: -12 }).toDestination();
+            sounds.undo = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }, volume: -15 }).toDestination();
+            sounds.win = new Tone.PolySynth(Tone.FMSynth, { harmonicity: 3.01, modulationIndex: 14, envelope: { attack: 0.01, decay: 1.5, sustain: 0.1, release: 2 }, modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 1 }, volume: -10 }).toDestination();
+            sounds.click = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.15, sustain: 0 }, volume: -18 }).toDestination();
+            sounds.fire = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.2, decay: 1.3, sustain: 0.1, release: 0.5 }, volume: -6 }).toDestination();
+        }
+
+        function playSound(sound) {
+            if (!soundEnabled || !sounds[sound] || Tone.context.state !== 'running') return;
+            const now = Tone.now();
+            const noteMap = { 'point': 'C5', 'undo': 'G3', 'win': ['C5', 'E5', 'G5'], 'click': 'C1' };
+            const durationMap = { 'point': '16n', 'undo': '16n', 'win': '1s', 'click': '16n', 'fire': '0.5s' };
+            if (sound === 'fire') sounds.fire.triggerAttackRelease(durationMap.fire, now);
+            else sounds[sound].triggerAttackRelease(noteMap[sound], durationMap[sound], now);
+        }
+        
+        // ===================================================================
+        // LÓGICA DE NAVEGACIÓN Y MODALES
+        // ===================================================================
+        function switchScreen(screenId) {
+            Object.values(DOM).forEach(el => {
+                if (el.id && el.id.startsWith('screen')) el.classList.add('hidden');
+            });
+            DOM[screenId.replace(/-./g, m => m[1].toUpperCase())].classList.remove('hidden');
+        }
+
+        function showModal(title, bodyHtml, footerButtons = [], isBlocking = false) {
+            DOM.modalTitle.textContent = title;
+            DOM.modalBody.innerHTML = bodyHtml;
+            DOM.modalFooter.innerHTML = '';
+            DOM.modalContainer.dataset.blocking = isBlocking;
+            DOM.modalCloseBtn.style.display = isBlocking ? 'none' : 'block';
+            
+            const buttons = footerButtons.length > 0 ? footerButtons : [{ text: 'Cerrar', classes: 'bg-gray-700' }];
+            buttons.forEach(btnConfig => {
+                const button = document.createElement('button');
+                button.textContent = btnConfig.text;
+                button.className = `btn ${btnConfig.classes}`;
+                button.onclick = () => {
+                    if (btnConfig.onClick) btnConfig.onClick();
+                    if (btnConfig.closesModal !== false) hideModal();
+                };
+                DOM.modalFooter.appendChild(button);
+            });
+            DOM.modalContainer.classList.remove('hidden');
+        }
+
+        function hideModal() { 
+            DOM.modalContainer.classList.add('hidden');
+            delete DOM.modalContainer.dataset.blocking;
+        }
+
+        // ===================================================================
+        // LÓGICA DE JUEGO
+        // ===================================================================
+        function getGameSettings() {
+            return { flor: DOM.florToggle.checked, picaPica: DOM.picaPicaToggle.checked };
+        }
+
+        function startGame(initialState) {
+            if (initialState === 'new_quick') {
+                state.game = {
+                    mode: 'quick',
+                    teams: [
+                        { name: 'Nosotros', score: 0, color: 'var(--accent-blue)', wins: 0 },
+                        { name: 'Ellos', score: 0, color: 'var(--accent-red)', wins: 0 }
+                    ],
+                    settings: getGameSettings(), isFinished: false
+                };
+            } 
+            else if (!initialState && state.game && state.game.mode === 'quick') {
+                state.game.teams.forEach(t => t.score = 0);
+                state.game.isFinished = false;
+                state.game.settings = getGameSettings();
+            }
+            else {
+                if (!initialState || !initialState.mode) { return startGame('new_quick'); }
+                state.game = initialState;
+            }
+            renderGameUI();
+            updatePicaPicaBanner();
+            switchScreen('screenGame');
+        }
+        
+        function renderGameUI() {
+            DOM.gameContainer.innerHTML = '';
+            state.game.teams.forEach((team, index) => {
+                const teamEl = document.createElement('div');
+                teamEl.className = 'card-bg rounded-2xl p-3 flex flex-col overflow-hidden';
+                teamEl.innerHTML = `
+                    <div class="team-name-container" data-team-index="${index}">
+                        <h2 class="team-name">${team.name}</h2>
+                    </div>
+                    <div class="team-score text-center text-4xl sm:text-5xl font-black" style="color: ${team.color};">${team.score}</div>
+                    <div class="fosforo-container flex-grow my-1 p-1 flex flex-col items-center gap-y-1.5 overflow-y-auto bg-black bg-opacity-20 rounded-lg"></div>
+                    <div class="relative mt-auto pt-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button data-team-index="${index}" data-points="1" class="add-point-btn btn btn-add-point">+1</button>
+                            <button data-team-index="${index}" data-points="2" class="add-point-btn btn btn-add-point">+2</button>
+                            <button data-team-index="${index}" data-points="3" class="add-point-btn btn btn-add-point">+3</button>
+                            <button data-team-index="${index}" class="subtract-point-btn btn bg-gray-700 text-white !py-2 text-sm">-1</button>
+                            <button data-team-index="${index}" data-points="3" class="flor-btn btn btn-flor ${state.game.settings.flor ? '' : 'hidden'} col-span-2">Flor</button>
+                        </div>
+                    </div>`;
+                DOM.gameContainer.appendChild(teamEl);
+                renderFosforos(index, team.score);
+            });
+            renderGameHistoryButton();
+        }
+        
+        function processPointQueue() {
+            if (isProcessingQueue || pointUpdateQueue.length === 0) return;
+            isProcessingQueue = true;
+            const { teamIndex, points } = pointUpdateQueue.shift();
+            
+            if (state.game.isFinished && points > 0) { 
+                isProcessingQueue = false;
+                processPointQueue(); 
+                return;
+            }
+
+            const team = state.game.teams[teamIndex];
+            const oldScore = team.score;
+            const newScore = team.score + points;
+            team.score = Math.min(30, Math.max(0, newScore));
+            
+            playSound(points > 0 ? 'point' : 'undo');
+            updatePicaPicaBanner();
+            
+            const teamContainer = DOM.gameContainer.children[teamIndex];
+            if (teamContainer) {
+                teamContainer.querySelector('.team-score').textContent = team.score;
+            }
+            
+            checkSpecialEvents(teamIndex, oldScore, team.score);
+            
+            isProcessingQueue = false;
+            
+            if (pointUpdateQueue.length > 0) {
+                requestAnimationFrame(processPointQueue);
+            }
+        }
+
+        function addPoints(teamIndex, points) {
+            if (state.game.isFinished || state.game.teams[teamIndex].score >= 30) return; 
+            pointUpdateQueue.push({ teamIndex, points });
+            if (!isProcessingQueue) processPointQueue();
+        }
+        
+        function subtractPoint(teamIndex) {
+            pointUpdateQueue.push({ teamIndex, points: -1 });
+            if (!isProcessingQueue) processPointQueue();
+        }
+
+        function endGame(winnerTeamIndex) {
+            state.game.isFinished = true;
+            if (state.game.teams[winnerTeamIndex].score >= 30) {
+                triggerFullScreenFire(); 
+                renderFosforos(winnerTeamIndex, state.game.teams[winnerTeamIndex].score);
+            }
+            playSound('win');
+            const winner = state.game.teams[winnerTeamIndex];
+            const loser = state.game.teams[winnerTeamIndex === 0 ? 1 : 0];
+            const scoreText = `${winner.score} a ${loser.score}`;
+            let body = `<p class="text-center text-2xl">¡<span class="font-bold text-green-400">${winner.name}</span> ha ganado!</p><p class="text-center mt-2">${scoreText}</p>`;
+            let buttons = [];
+
+            if (state.game.mode === 'quick') {
+                state.game.teams[winnerTeamIndex].wins++;
+                renderGameHistoryButton();
+                buttons.push({ text: 'Jugar de Nuevo', classes: 'btn-win', onClick: () => startGame() });
+            } else if (state.game.mode === 'tournament') {
+                const match = state.tournament.rounds[state.game.currentRoundIndex].matches[state.game.currentMatchIndex];
+                match.winner = winner.name;
+                match.score = scoreText;
+                updateAndSaveTournamentHistory();
+                buttons.push({ text: 'Volver al Torneo', classes: 'btn-action', onClick: () => { renderTournament(); switchScreen('screenTournament'); } });
+            }
+            
+            buttons.push({ text: 'Menú Principal', classes: 'btn-secondary', onClick: () => switchScreen('screenSetup') });
+            
+            showModal("Partida Finalizada", body, buttons, true);
+        }
+
+        function renderGameHistoryButton() {
+            DOM.gameHistoryBtnContainer.innerHTML = '';
+            if (state.game.mode === 'quick') {
+                const btn = document.createElement('button');
+                btn.id = 'game-history-btn';
+                btn.className = 'btn btn-action !py-2 text-sm';
+                btn.textContent = `H: ${state.game.teams[0].wins} - ${state.game.teams[1].wins}`;
+                btn.onclick = () => showModal('Historial de Partida', `<p class="text-center text-xl">${state.game.teams[0].name}: ${state.game.teams[0].wins} victorias</p><p class="text-center text-xl">${state.game.teams[1].name}: ${state.game.teams[1].wins} victorias</p>`);
+                DOM.gameHistoryBtnContainer.appendChild(btn);
+            }
+        }
+
+        // ===================================================================
+        // LÓGICA DE TORNEO
+        // ===================================================================
+        function formatTeamName(players) {
+            if (players.length < 2) return players.join('');
+            if (players.length === 2) return players.join(' y ');
+            return players.slice(0, -1).join(', ') + ' y ' + players.slice(-1);
+        }
+
+        function createTournament() {
+            const playerCount = parseInt(DOM.playerCount.value);
+            const playersPerTeam = parseInt(DOM.playersPerTeam.value);
+            const nameInputs = DOM.playerNamesContainer.querySelectorAll('input');
+            const playerNames = Array.from(nameInputs).map(input => input.value.trim());
+            if (playerNames.some(name => name === '') || new Set(playerNames).size !== playerNames.length) {
+                DOM.tournamentError.classList.remove('hidden'); return;
+            }
+            DOM.tournamentError.classList.add('hidden');
+            const shuffledPlayers = playerNames.sort(() => 0.5 - Math.random());
+            const teams = [];
+            for (let i = 0; i < playerCount; i += playersPerTeam) {
+                const teamPlayers = shuffledPlayers.slice(i, i + playersPerTeam);
+                teams.push(formatTeamName(teamPlayers));
+            }
+            state.tournament = { id: `torneo_${Date.now()}`, teams, rounds: [], settings: { ...getGameSettings(), playersPerTeam } };
+            addTournamentRound();
+            const history = loadGeneralHistory();
+            history.tournaments.push({ ...state.tournament });
+            saveGeneralHistory(history);
+            renderTournament();
+            switchScreen('screenTournament');
+        }
+
+        function addTournamentRound() {
+            const teamsForRound = [...state.tournament.teams];
+            const shuffledTeams = teamsForRound.sort(() => 0.5 - Math.random());
+            const newMatches = [];
+            for (let i = 0; i < shuffledTeams.length; i += 2) {
+                if (shuffledTeams[i+1]) newMatches.push({ teamA: shuffledTeams[i], teamB: shuffledTeams[i+1], winner: null, score: null });
+            }
+            state.tournament.rounds.push({ matches: newMatches });
+            renderTournament();
+        }
+        
+        function renderTournament() {
+            DOM.roundsContainer.innerHTML = '';
+            state.tournament.rounds.forEach((round, roundIndex) => {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'bg-black bg-opacity-20 p-2 rounded-lg';
+                roundDiv.innerHTML = `<h3 class="text-lg font-bold mb-2 text-purple-400 border-b border-purple-800 pb-1">Ronda ${roundIndex + 1}</h3>`;
+                const matchesContainer = document.createElement('div');
+                matchesContainer.className = 'space-y-2';
+                round.matches.forEach((match, matchIndex) => matchesContainer.appendChild(createMatchElement(roundIndex, match, matchIndex)));
+                roundDiv.appendChild(matchesContainer);
+                DOM.roundsContainer.appendChild(roundDiv);
+            });
+        }
+
+        function createMatchElement(roundIndex, match, matchIndex) {
+            const matchDiv = document.createElement('div');
+            matchDiv.className = 'flex items-center justify-between gap-2 p-2 rounded-md bg-gray-900 bg-opacity-50';
+            if (match.winner) {
+                const winnerIsA = match.teamA === match.winner;
+                matchDiv.innerHTML = `<div class="flex-1 text-left truncate"><span class="text-sm ${winnerIsA ? 'font-bold text-green-400' : 'text-gray-500'}">${match.teamA}</span></div><div class="flex-shrink-0"><span class="text-xs bg-gray-800 px-2 py-1 rounded-full font-semibold">${match.score}</span></div><div class="flex-1 text-right truncate"><span class="text-sm ${!winnerIsA ? 'font-bold text-green-400' : 'text-gray-500'}">${match.teamB}</span></div>`;
+            } else {
+                const allTeams = state.tournament.teams;
+                
+                const updateOpponentOptions = (select1, select2) => {
+                    const selectedValue = select1.value;
+                    Array.from(select2.options).forEach(option => {
+                        option.disabled = (option.value === selectedValue && selectedValue !== '');
+                    });
+                };
+
+                const selectA = createTeamSelect(allTeams, match.teamA);
+                const selectB = createTeamSelect(allTeams, match.teamB);
+
+                selectA.onchange = (e) => {
+                    state.tournament.rounds[roundIndex].matches[matchIndex].teamA = e.target.value;
+                    updateOpponentOptions(selectA, selectB);
+                };
+                selectB.onchange = (e) => {
+                    state.tournament.rounds[roundIndex].matches[matchIndex].teamB = e.target.value;
+                    updateOpponentOptions(selectB, selectA);
+                };
+                
+                const playBtn = document.createElement('button');
+                playBtn.textContent = 'Jugar';
+                playBtn.className = 'btn btn-action !py-1 px-2 text-xs';
+                playBtn.onclick = () => {
+                    const currentMatch = state.tournament.rounds[roundIndex].matches[matchIndex];
+                    if (currentMatch.teamA && currentMatch.teamB && currentMatch.teamA !== currentMatch.teamB) {
+                        startGame({ mode: 'tournament', teams: [{ name: currentMatch.teamA, score: 0, color: 'var(--accent-blue)' }, { name: currentMatch.teamB, score: 0, color: 'var(--accent-red)' }], settings: state.tournament.settings, isFinished: false, currentRoundIndex: roundIndex, currentMatchIndex: matchIndex });
+                    } else { showModal("Error", "<p>Selecciona dos equipos diferentes para jugar.</p>"); }
+                };
+
+                matchDiv.append(selectA, document.createTextNode('vs'), selectB, playBtn);
+                updateOpponentOptions(selectA, selectB);
+                updateOpponentOptions(selectB, selectA);
+            }
+            return matchDiv;
+        }
+        
+        function createTeamSelect(teams, selectedValue) {
+            const select = document.createElement('select');
+            select.className = 'input-field !p-1 !w-2/5 text-xs';
+            select.innerHTML = `<option value="">Elegir...</option>` + teams.map(team => `<option value="${team}" ${team === selectedValue ? 'selected' : ''}>${team}</option>`).join('');
+            return select;
+        }
+
+        function showAddTeamModal() {
+            if (!state.tournament) return;
+            const playersPerTeam = state.tournament.settings.playersPerTeam;
+            let inputsHtml = Array.from({length: playersPerTeam}, (_, i) => `<input type="text" class="new-player-input input-field" placeholder="Nombre Jugador ${i + 1}">`).join('<div class="h-2"></div>');
+            
+            showModal("Añadir Nueva Pareja", `<div class="space-y-2">${inputsHtml}</div>`, [
+                { text: 'Cancelar', classes: 'bg-gray-700' },
+                { text: 'Añadir', classes: 'btn-action', onClick: () => {
+                    const playerNames = Array.from(document.querySelectorAll('.new-player-input')).map(i => i.value.trim());
+                    if (playerNames.some(name => name === '')) {
+                        showModal("Error", "<p>Todos los nombres deben estar completos.</p>", [], true);
+                        return;
+                    }
+                    
+                    const allPlayersInTournament = state.tournament.teams.flatMap(t => t.split(/, | y /));
+                    if (playerNames.some(name => allPlayersInTournament.includes(name))) {
+                        showModal("Error", "<p>Uno o más jugadores ya existen en el torneo.</p>", [], true);
+                        return;
+                    }
+                    
+                    const newTeamName = formatTeamName(playerNames);
+                    state.tournament.teams.push(newTeamName);
+                    
+                    updateAndSaveTournamentHistory();
+                    
+                    renderTournament();
+                    hideModal();
+                }}
+            ]);
+        }
+
+        // ===================================================================
+        // LÓGICA DE HISTORIAL Y EDICIÓN
+        // ===================================================================
+        function loadGeneralHistory() { return JSON.parse(localStorage.getItem('trucoHistoryV27')) || { tournaments: [] }; }
+        function saveGeneralHistory(history) { localStorage.setItem('trucoHistoryV27', JSON.stringify(history)); }
+
+        function updateAndSaveTournamentHistory() {
+            if (!state.tournament || !state.tournament.id) return;
+            const history = loadGeneralHistory();
+            const tournamentIndex = history.tournaments.findIndex(t => t.id === state.tournament.id);
+            if (tournamentIndex !== -1) {
+                history.tournaments[tournamentIndex] = JSON.parse(JSON.stringify(state.tournament));
+                saveGeneralHistory(history);
+            }
+        }
+
+        function promptForNameChange(teamIndex) {
+            const team = state.game.teams[teamIndex];
+            const originalName = team.name; 
+
+            const body = `<input type="text" id="edit-name-input" class="input-field" value="${team.name}">`;
+            showModal("Cambiar Nombre", body, [
+                { text: 'Cancelar', classes: 'bg-gray-700' },
+                { text: 'Guardar', classes: 'btn-action', onClick: () => {
+                    const newName = document.getElementById('edit-name-input').value.trim();
+                    if (newName) {
+                        team.name = newName;
+                        const nameEl = DOM.gameContainer.children[teamIndex].querySelector('.team-name');
+                        if (nameEl) nameEl.textContent = newName;
+                        renderGameHistoryButton();
+
+                        if (state.game.mode === 'tournament' && newName !== originalName) {
+                            const teamIndexInTournament = state.tournament.teams.indexOf(originalName);
+                            if (teamIndexInTournament > -1) {
+                                state.tournament.teams[teamIndexInTournament] = newName;
+                            }
+
+                            state.tournament.rounds.forEach(round => {
+                                round.matches.forEach(match => {
+                                    if (match.teamA === originalName) match.teamA = newName;
+                                    if (match.teamB === originalName) match.teamB = newName;
+                                    if (match.winner === originalName) match.winner = newName;
+                                });
+                            });
+                            
+                            updateAndSaveTournamentHistory();
+                        }
+                    }
+                    hideModal();
+                }}
+            ]);
+            document.getElementById('edit-name-input').focus();
+        }
+
+        // ===================================================================
+        // INICIALIZACIÓN Y EVENT LISTENERS
+        // ===================================================================
+        function setViewportHeight() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        function updatePicaPicaAvailability() {
+            const isTournament = DOM.gameMode.value === 'tournament';
+            const playersPerTeam = parseInt(DOM.playersPerTeam.value);
+
+            // CAMBIO: La lógica ahora depende de playersPerTeam
+            if (isTournament && playersPerTeam !== 3) {
+                DOM.picaPicaToggle.checked = false;
+                DOM.picaPicaToggle.disabled = true;
+                DOM.picaPicaOptionContainer.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                DOM.picaPicaToggle.disabled = false;
+                DOM.picaPicaOptionContainer.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function init() {
+            setViewportHeight(); 
+            window.addEventListener('resize', setViewportHeight); 
+
+            setupSounds();
+            updateSoundButton();
+            DOM.gameMode.addEventListener('change', (e) => {
+                const isTournament = e.target.value === 'tournament';
+                DOM.tournamentSetup.classList.toggle('hidden', !isTournament);
+                DOM.startBtn.textContent = isTournament ? 'Crear Torneo' : 'Empezar Partida';
+                updatePicaPicaAvailability();
+            });
+            DOM.playerCount.addEventListener('input', generatePlayerNameInputs);
+            DOM.playersPerTeam.addEventListener('input', updatePicaPicaAvailability); // Se agrega listener aquí
+            
+            DOM.startBtn.addEventListener('click', () => { playSound('click'); if (DOM.gameMode.value === 'quick') startGame('new_quick'); else createTournament(); });
+            DOM.backToMenuBtn.addEventListener('click', () => { playSound('click'); if (state.game && state.game.mode === 'tournament') { renderTournament(); switchScreen('screenTournament'); } else switchScreen('screenSetup'); });
+            DOM.backToSetupBtn.addEventListener('click', () => { playSound('click'); switchScreen('screenSetup'); });
+            
+            DOM.gameContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (button) {
+                    const teamIndex = parseInt(button.dataset.teamIndex);
+                    if (button.classList.contains('add-point-btn') || button.classList.contains('flor-btn')) addPoints(teamIndex, parseInt(button.dataset.points));
+                    else if (button.classList.contains('subtract-point-btn')) subtractPoint(teamIndex);
+                    return;
+                }
+                const nameContainer = e.target.closest('.team-name-container');
+                if (nameContainer) {
+                    promptForNameChange(parseInt(nameContainer.dataset.teamIndex));
+                }
+            });
+
+            DOM.soundToggleBtn.addEventListener('click', () => { soundEnabled = !soundEnabled; playSound('click'); updateSoundButton(); });
+            DOM.body.addEventListener('click', () => Tone.start(), { once: true });
+            DOM.modalContainer.addEventListener('click', (e) => { if (e.target === DOM.modalContainer && !e.currentTarget.dataset.blocking) hideModal(); });
+            DOM.modalCloseBtn.addEventListener('click', hideModal);
+            DOM.addRoundBtn.addEventListener('click', () => { playSound('click'); addTournamentRound(); });
+            DOM.addTeamBtn.addEventListener('click', () => { playSound('click'); showAddTeamModal(); });
+            DOM.tournamentHistoryBtn.addEventListener('click', () => { playSound('click'); showTournamentHistory(); });
+            generatePlayerNameInputs();
+            updatePicaPicaAvailability(); // Llamada inicial
+        }
+        
+        function updateSoundButton() { DOM.soundToggleBtn.innerHTML = soundEnabled ? ICONS.soundOn : ICONS.soundOff; }
+        function generatePlayerNameInputs() { 
+            const count = parseInt(DOM.playerCount.value); 
+            DOM.playerNamesContainer.innerHTML = Array.from({length: count}, (_, i) => `<input type="text" placeholder="Jugador ${i + 1}" class="input-field text-sm">`).join('<div class="h-1"></div>');
+        }
+
+        // ===================================================================
+        // LÓGICA DE FÓSFOROS Y EVENTOS
+        // ===================================================================
+        function createTallyGroup(type, isBurnt) {
+            const group = document.createElement('div');
+            group.className = 'fosforo-group';
+            group.innerHTML = `<div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 3px; height: 30px; top: 0; left: 0;"></div><div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 3px; height: 30px; top: 0; left: 27px;"></div><div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 30px; height: 3px; top: 0; left: 0;"></div><div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 30px; height: 3px; top: 27px; left: 0;"></div><div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 3px; height: 42px; top: -6px; left: 13.5px; transform: rotate(45deg);"></div>`;
+            return group;
+        }
+
+        function renderTally(score, type, isBurnt) {
+            const container = document.createElement('div');
+            container.className = 'w-full';
+            container.dataset.tallyType = type;
+            if (score > 0) {
+                container.innerHTML = `<h4 class="text-xs text-center text-gray-400 font-semibold mb-1">${type.toUpperCase()}</h4>`;
+                const inner = document.createElement('div');
+                inner.className = 'flex flex-col items-center gap-y-1.5 p-1';
+                const fullGroups = Math.floor(score / 5);
+                const remainder = score % 5;
+                for (let i = 0; i < fullGroups; i++) inner.appendChild(createTallyGroup(type, isBurnt));
+                if (remainder > 0) {
+                    const group = document.createElement('div');
+                    group.className = 'fosforo-group';
+                    let html = '';
+                    if (remainder >= 1) html += `<div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 3px; height: 30px; top: 0; left: 0;"></div>`;
+                    if (remainder >= 2) html += `<div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 3px; height: 30px; top: 0; left: 27px;"></div>`;
+                    if (remainder >= 3) html += `<div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 30px; height: 3px; top: 0; left: 0;"></div>`;
+                    if (remainder >= 4) html += `<div class="fosforo ${type} ${isBurnt ? 'quemado' : ''}" style="width: 30px; height: 3px; top: 27px; left: 0;"></div>`;
+                    group.innerHTML = html;
+                    inner.appendChild(group);
+                }
+                container.appendChild(inner);
+            }
+            return container;
+        };
+
+        function renderFosforos(teamIndex, score) {
+            const teamContainer = DOM.gameContainer.children[teamIndex];
+            if (!teamContainer) return;
+            const fosforoContainer = teamContainer.querySelector('.fosforo-container');
+            if (!fosforoContainer) return;
+            fosforoContainer.innerHTML = '';
+            const malasScore = Math.min(score, 15);
+            const buenasScore = Math.max(0, score - 15);
+            fosforoContainer.appendChild(renderTally(malasScore, 'malas', score >= 15));
+            fosforoContainer.appendChild(renderTally(buenasScore, 'buenas', score >= 30));
+        }
+
+        function checkSpecialEvents(teamIndex, oldScore, newScore) {
+            renderFosforos(teamIndex, newScore);
+            if (newScore >= 30 && oldScore < 30) {
+                endGame(teamIndex);
+            } else if (newScore >= 15 && oldScore < 15) {
+                triggerFullScreenFire();
+                renderFosforos(teamIndex, newScore);
+            }
+            if (newScore === 29) {
+                triggerCLPModal();
+            }
+        }
+
+        function triggerFullScreenFire() {
+            playSound('fire');
+            const overlay = DOM.fireOverlay;
+            overlay.innerHTML = '';
+            for (let i = 0; i < 120; i++) { 
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 60 + 20; 
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.animationDelay = `${Math.random() * 0.4}s`;
+                particle.style.animationDuration = `${Math.random() * 0.8 + 1}s`; 
+                overlay.appendChild(particle);
+            }
+            setTimeout(() => { overlay.innerHTML = ''; }, 2200); 
+        }
+        
+        function updatePicaPicaBanner() {
+            if (!state.game || !state.game.settings.picaPica) {
+                DOM.picaPicaBanner.classList.remove('visible');
+                return;
+            }
+            const scores = state.game.teams.map(t => t.score);
+            const inPicaPicaRange = scores.some(s => s >= 5);
+            const overPicaPicaRange = scores.some(s => s > 20);
+            DOM.picaPicaBanner.classList.toggle('visible', inPicaPicaRange && !overPicaPicaRange);
+        }
+
+        function triggerCLPModal() {
+            DOM.clpModal.classList.remove('hidden');
+            setTimeout(() => DOM.clpModal.classList.add('hidden'), 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
