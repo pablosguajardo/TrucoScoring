@@ -1,0 +1,2 @@
+# TrucoScoring
+Truco Scoring
