@@ -12,21 +12,30 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.core.view.WindowCompat
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var adView: AdView
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Ocupa todo incluyendo status bar y navigation bar
+        // Full screen — ocupa todo incluyendo status/nav bar
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
 
-        webView = WebView(this).apply {
+        // Inflar layout (WebView + AdView al fondo)
+        setContentView(R.layout.activity_main)
+
+        // Configurar WebView
+        webView = findViewById(R.id.webView)
+        webView.apply {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -49,7 +58,12 @@ class MainActivity : ComponentActivity() {
             loadUrl("file:///android_asset/www/index.html")
         }
 
-        setContentView(webView)
+        // Inicializar AdMob y cargar banner
+        MobileAds.initialize(this) {}
+        adView = findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView.loadAd(adRequest)
+
         hideSystemUI()
     }
 
@@ -76,6 +90,21 @@ class MainActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemUI()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        adView.resume()
+    }
+
+    override fun onPause() {
+        adView.pause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        adView.destroy()
+        super.onDestroy()
     }
 
     @Deprecated("Deprecated in Java")
