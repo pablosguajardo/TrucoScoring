@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Truco Scoring"
+rootProject.name = "Anotador de Truco"
 include(":app")
  

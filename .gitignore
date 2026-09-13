@@ -16,3 +16,7 @@ local.properties
 .graphify
 .idea
 .kotlin
+
+# graphify-axet
+.graphify/
+app/release
