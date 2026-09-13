@@ -83,6 +83,15 @@ body{height:100%;font-family:'Rye',serif;color:var(--cream);-webkit-user-select:
 
 /* LANDSCAPE COMPACTO */
 @media (orientation:landscape) and (max-height:520px){
+/* Setup screen en landscape: permitir scroll y compactar */
+#screen-setup{align-items:flex-start!important;justify-content:flex-start!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding:.5rem!important}
+#screen-setup .card-bg{margin:auto;padding:.75rem!important;gap:.5rem!important}
+#screen-setup h1{font-size:1.8rem!important;margin-bottom:0!important}
+#screen-setup p.text-xs{display:none}
+#screen-setup .gold-div.mt-3{margin-top:.3rem!important}
+#screen-setup .input-field{padding:.3rem .5rem!important}
+#screen-setup .btn-primary{padding:.5rem 1rem!important}
+#screen-setup .opt-row{padding:.3rem .5rem!important}
 #screen-game header{padding:.15rem .5rem .1rem!important}
 .team-name-container{padding:.2rem .3rem .1rem!important}
 .team-name{font-size:clamp(.65rem,2vw,.8rem)!important}
