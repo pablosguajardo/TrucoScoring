@@ -10,5 +10,5 @@ localStorage.clear()
 
 
 
-
+borrar demo:
 localStorage.removeItem('trucoTutorialShown')
