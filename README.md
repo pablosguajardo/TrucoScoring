@@ -1,6 +1,8 @@
 # TrucoScoring
-Truco Scoring
+Anotador de truco
 
+
+db.exe install -r "C:\d\p\TrucoScoring\app\release\app-release.apk"
 
 
 
